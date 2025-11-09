@@ -209,8 +209,11 @@ local AHBotBuyEventId                                         -- Used to track i
 local botList = table.concat(AHBots, ",")                     -- Converts table to a string for SQL and concat interaction
 local houseList = table.concat(EnabledAuctionHouses, ",")     -- Converts table to a string for SQL and concat interaction
 local postedAuctions = {}                                     -- Counts how many auctions have been posted by the auction bots last. Used in info cmd
-local EnchantmentModule = require("EnchantmentModule")        -- For random item properties
-require("AHBot_Helpers")
+local Helpers = require("AHBot_Helpers")
+Helpers.config = {
+    AllowedAllyRaces = AllowedAllyRaces,
+    AllowedHordeRaces = AllowedHordeRaces,
+}
 
 -- Early returns and MySQL error failsafes
 if not EnabledAuctionHouses then error("[Eluna AH Bot]: Core - No valid auction houses found!") end
@@ -261,10 +264,14 @@ local ItemsVanilla = require("ItemsVanilla")
 local ItemsTBC = require("ItemsTBC")
 local ItemsWotLK = require("ItemsWotLK")
 
--- Static tables of ItemRandomPropeties.dbc and ItemRandomSuffix.dbc to assign enchant IDs to random property items
-local ItemRandomSuffix = require("ItemRandomSuffix")
-local ItemRandomProperties = require("ItemRandomProperties")
 local ItemRandomProperty = {} -- For items with randomized names
+
+local EnchantmentModule = require("EnchantmentModule")        -- For random item properties
+EnchantmentModule.config = {
+    ApplyRandomProperties = ApplyRandomProperties,
+    ItemRandomProperty = ItemRandomProperty,
+    AHBotItemDebug = AHBotItemDebug,
+}
 
 -- Build filtered item_template query
 local ItemTemplateQuery = [[
@@ -450,11 +457,11 @@ local function SelectRandomItems()
         elseif item.class == 2 or item.class == 4 then
             local quality = item.Quality
             groupedItems.Gear[quality] = groupedItems.Gear[quality] or {}
-            addWeightedItems(groupedItems.Gear[quality], item, ItemWeights.Gear[getQualityString(quality)])
+            addWeightedItems(groupedItems.Gear[quality], item, ItemWeights.Gear[Helpers.getQualityString(quality)])
         elseif item.class == 7 then
             local quality = item.Quality
             groupedItems.Mats[quality] = groupedItems.Mats[quality] or {}
-            addWeightedItems(groupedItems.Mats[quality], item, ItemWeights.Mats[getQualityString(quality)])
+            addWeightedItems(groupedItems.Mats[quality], item, ItemWeights.Mats[Helpers.getQualityString(quality)])
         elseif item.class == 6 then
             addWeightedItems(groupedItems.Projectile, item, ItemWeights.Projectile)
         elseif item.class == 16 then
@@ -485,7 +492,7 @@ local function SelectRandomItems()
         -- Add quality-based groups (Gear and Mats)
         for groupName, qualityGroups in pairs({Gear = groupedItems.Gear, Mats = groupedItems.Mats}) do
             for quality, items in pairs(qualityGroups) do
-                local weight = ItemWeights[groupName][getQualityString(quality)]
+                local weight = ItemWeights[groupName][Helpers.getQualityString(quality)]
                 totalWeight = addToWeightMap(weightMap, items, weight, totalWeight)
             end
         end
@@ -681,7 +688,7 @@ function AHBot_Buy_ProcessTransactions(underpricedItems, auctionResults)
                         transactionType = "buyout"
                         price = matchingAuction.buyoutprice
                     else
-                        price = randomFloatBetween(minBid, maxBid)
+                        price = Helpers.randomFloatBetween(minBid, maxBid)
                     end
                 end
                 
@@ -900,7 +907,7 @@ local function ProcessItemCreation(selectedItems, houseId, availableGuids, avail
     for _, item in ipairs(selectedItems) do
         if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Processing item "..item.name) end
         
-        local isAllowed = IsItemAllowedForHouse(item, houseId)
+        local isAllowed = Helpers.IsItemAllowedForHouse(item, houseId)
         
         if not isAllowed then
             if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Removing item " .. item.name .. " from queue due to belonging to another faction than auction house ID "..houseId) end
@@ -919,7 +926,7 @@ local function ProcessItemCreation(selectedItems, houseId, availableGuids, avail
             cost = cost * stack
             
             if SellPriceVariance then
-                cost = cost * randomFloatBetween(1 - (SellPriceVariance/100), 1 + (SellPriceVariance/100))
+                cost = cost * Helpers.randomFloatBetween(1 - (SellPriceVariance/100), 1 + (SellPriceVariance/100))
             end
             
             cost = math.floor(cost)

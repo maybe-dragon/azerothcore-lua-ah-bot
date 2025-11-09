@@ -1,5 +1,9 @@
+-- Static tables of ItemRandomPropeties.dbc and ItemRandomSuffix.dbc to assign enchant IDs to random property items
+local ItemRandomSuffix = require("ItemRandomSuffix")
+local ItemRandomProperties = require("ItemRandomProperties")
+
 -- enchantments.lua
-local EnchantmentModule = {}
+local EnchantmentModule = {config = {}}
 
 -- Default enchant string with 36 zeros
 local DEFAULT_ENCHANT_STRING = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
@@ -44,16 +48,13 @@ local function GetRandomSuffix(item)
     return suffixOptions[math.random(1, #suffixOptions)]
 end
 
-function EnchantmentModule.ApplyRandomEnchantments(item, config)
+function EnchantmentModule.ApplyRandomEnchantments(item)
     local randomStats = 0
     local enchantString = DEFAULT_ENCHANT_STRING
     
-    -- Use config values or globals as fallback
-    local applyRandomProperties = config and config.ApplyRandomProperties or ApplyRandomProperties
-    local debugMode = config and config.AHBotItemDebug or AHBotItemDebug
-    local itemRandomProperty = config and config.ItemRandomProperty or ItemRandomProperty
-    local itemRandomProperties = config and config.ItemRandomProperties or ItemRandomProperties
-    local itemRandomSuffix = config and config.ItemRandomSuffix or ItemRandomSuffix
+    local applyRandomProperties = EnchantmentModule.config.ApplyRandomProperties
+    local itemRandomProperty = EnchantmentModule.config.ItemRandomProperty
+    local debugMode = EnchantmentModule.config.AHBotItemDebug
     
     if not applyRandomProperties then
         return randomStats, enchantString
@@ -72,7 +73,7 @@ function EnchantmentModule.ApplyRandomEnchantments(item, config)
         if properties then
             local selectedProperty = GetSelectedProperty(properties)
             if selectedProperty then
-                local e1, e2, e3 = table.unpack(itemRandomProperties[selectedProperty.ench])
+                local e1, e2, e3 = table.unpack(ItemRandomProperties[selectedProperty.ench])
                 enchantString = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "..e1.." 0 0 "..e2.." 0 0 "..e3.." 0 0 0 0 0 0 0 0 "
                 randomStats = selectedProperty.ench
                 if debugMode then 
@@ -82,7 +83,7 @@ function EnchantmentModule.ApplyRandomEnchantments(item, config)
         end
     elseif randomStats < 0 then -- Handle random suffixes
         local selectedSuffix = GetRandomSuffix(item)
-        local e1, e2, e3, e4, e5 = table.unpack(itemRandomSuffix[selectedSuffix].Enchantment)
+        local e1, e2, e3, e4, e5 = table.unpack(ItemRandomSuffix[selectedSuffix].Enchantment)
         enchantString = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "..e1.." 0 0 "..e2.." 0 0 "..e3.." 0 0 "..e4.." 0 0 "..e5.." 0 0 "
         randomStats = selectedSuffix * -1
         if debugMode then 
