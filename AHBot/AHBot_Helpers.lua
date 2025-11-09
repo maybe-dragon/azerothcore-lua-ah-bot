@@ -1,33 +1,17 @@
 local Helpers = {config = {}}
 
-local function bitAnd(a, b)
-    local result = 0
-    local shift = 0
-    while a > 0 or b > 0 do
-        -- Check the least significant bit of both numbers
-        if a % 2 == 1 and b % 2 == 1 then
-            result = result + 2^shift
-        end
-        -- Right shift both numbers by 1 (essentially dividing by 2)
-        a = math.floor(a / 2)
-        b = math.floor(b / 2)
-        shift = shift + 1
-    end
-    return result
-end
-
 function Helpers.IsItemAllowedForHouse(item, houseId)
     if houseId == 7 or item.race == 2147483647 or item.race == -1 then 
         return true
     elseif houseId == 2 then -- Alliance AH
         for _, race in ipairs(Helpers.config.AllowedAllyRaces) do
-            if (bitAnd(item.race, race) ~= 0) then 
+            if race > 0 and bit_and(item.race, race) ~= 0 then
                 return true
             end
         end
     elseif houseId == 6 then -- Horde AH
         for _, race in ipairs(Helpers.config.AllowedHordeRaces) do
-            if (bitAnd(item.race, race) ~= 0) then
+            if race > 0 and bit_and(item.race, race) ~= 0 then
                 return true
             end
         end
