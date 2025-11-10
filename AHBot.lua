@@ -53,7 +53,8 @@ local MaxAuctions           = 10000         -- Default: 5000. Max number of auct
 local MinAuctions           = 2000          -- Default: 2000. Min number of auctions. If under this value, AH will repopulate sales. If over, but less than max, has 30% chance per check to populate AH.
 local RepopulationChance    = 30            -- Default: 30. Percentage chance to partially restock AH if stock is between max and min during a periodical check. Can be overriden to force populate whenever with ".ahbot auctions add". 
 local CostFormula           = 1             -- Default: 1. 1 = Quality based scaling, 2 = Entry ID influenced, 3 = Quality/Level focused, 4 = Balanced multi-factor, 5 = Progressive thresholds, 6 = Random (1000-1000000)
-local SellPriceVariance     = 20            -- Default: 20. How many % to randomize prices with. 
+local SellPriceMaxDiscount  = 20            -- Default: 20. How many % to randomize prices below base price.
+local SellPriceMaxIncrease  = 50            -- Default: 50. How many % to randomize prices above base price.
 local AHSellTimer           = 5             -- Default: 5 (hours). How often the AH bot will check whether it needs to put up new auctions, in hours.
 local SellOnStartup         = true          -- Default: True. Used for debugging and instantly populating an empty auction house. If true, fires AH bot on Eluna load (startup / Eluna reloads). If false, activates on AHSellTimer. 
 local ApplyRandomProperties = true          -- Default: True. Adds enchant/random stats and corresponding name to items (e.g., "of the Eagle"). This is DBC-based with Lua tables copied into this script. Disable if non-WotLK core.
@@ -926,9 +927,7 @@ local function ProcessItemCreation(selectedItems, houseId, availableGuids, avail
             
             cost = cost * stack
             
-            if SellPriceVariance then
-                cost = cost * Helpers.randomFloatBetween(1 - (SellPriceVariance/100), 1 + (SellPriceVariance/100))
-            end
+            cost = cost * Helpers.randomFloatBetween(1 - (SellPriceMaxDiscount/100), 1 + (SellPriceMaxIncrease/100))
             
             cost = math.floor(cost)
             local startBid = math.floor(cost * (math.random(51, 90) / 100))
