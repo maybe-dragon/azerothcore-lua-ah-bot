@@ -99,6 +99,7 @@ local RecipePriceAdjustment = 10                               -- Default: 10. F
 local GemPriceAdjustment    = 0.142                            -- Default: 1/7. Factor to decrease gem prices by. These are usually high in price because their associated variables are high. Set to false to disable.
 local UndervaluedItemAdjust = 5                                -- Default: 5. Vellums, Titanium materials, VIII scrolls etc. are usually somewhat undervalued. Set to false to disable.
 local LowPriceFloor         = 200000                           -- Default: 200000 (20g). Price floor for certain items where multipliers don't work well. Companions, glyphs, etc. Randomized +- 30% around this base cost. If nil, defaults to UndervaluedItemAdjust.
+local MinPriceFloor         = 1000                             -- Default: 1000 (10s). Minimum base price for all items.
 
 -- Misc Config
 local AllowKeys                = false                           -- Default: False.
@@ -578,6 +579,65 @@ function ChooseCostFormula(formulaNum, item)
     end
 end
 
+local function CalculateItemCost(item)
+    local cost = ChooseCostFormula(CostFormula, item)
+
+    -- Item type price adjustments
+    if RecipePriceAdjustment and item.class == 9 and not item.name:find("Design:") then
+        cost = cost * RecipePriceAdjustment
+    end
+
+    if GemPriceAdjustment and item.class == 3 then
+        cost = cost * GemPriceAdjustment * (1 + (math.random() * 0.4 - 0.2))
+    end
+
+    if UndervaluedItemAdjust and cost < 50000 then
+        if ((item.class == 7 and item.entry > 40000) or (item.name:find("VIII"))) and not (item.Quality > 2 or item.entry == 41511) then
+            cost = cost * UndervaluedItemAdjust
+        end
+    end
+
+    if MinPriceFloor > 0 then
+        local ceiling = MinPriceFloor * 10
+        if cost < ceiling then
+            cost = MinPriceFloor + ((cost / ceiling) * (ceiling - MinPriceFloor))
+        end
+    end
+
+    -- Special handling for high-level bracers
+    if item.class == 4 and item.ItemLevel > 200 and item.InventoryType == 9 and item.bonding == 2 then
+        if cost < 500000 then cost = cost * 100 end
+    end
+
+    -- Handle pets and glyphs
+    if LowPriceFloor then
+        if (((item.class == 15 and item.subclass == 2) or (item.class == 16)) and cost < 200000) then
+            cost = LowPriceFloor * (math.random() * 0.6 + 0.7)
+        end
+    elseif UndervaluedItemAdjust then
+        if (((item.class == 15 and item.subclass == 2) or (item.class == 16)) and cost < 200000) then
+            cost = cost * UndervaluedItemAdjust
+        end
+    end
+
+    -- Adjusted ammo prices
+    if AdjustedAmmoPrices and item.class == 6 then
+        local ammoPrices = {
+            [1] = {150, 5000},
+            [2] = {10000, 100000},
+            [3] = {100000, 150000},
+            [4] = {200000, 350000},
+            [5] = {350000, 1000000}
+        }
+        local priceRange = ammoPrices[item.Quality]
+        if priceRange then
+            cost = math.random(priceRange[1], priceRange[2])
+        end
+    end
+
+    return cost
+end
+
 ---------------------------------------------------------------------------------
 -- AH Bot Buyer Script
 ---------------------------------------------------------------------------------
@@ -609,8 +669,7 @@ local function AHBot_Buy_ProcessItemResults(itemResults, auctionResults)
 
         if validItem then
             if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Calculating price for valid item " .. item.entry) end
-            local cost = ChooseCostFormula(CostFormula, item) * BotsPriceTolerance
-            if cost < 200000 then cost = math.random(50000, 250000) end
+            local cost = CalculateItemCost(item) * BotsPriceTolerance
             if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Final adjusted cost for item " .. item.entry .. ": " .. cost) end
 
             for _, auction in ipairs(auctionResults) do
@@ -819,68 +878,6 @@ end
 local currentHouse = 0
 local lastAuctionId
 
-local function CalculateItemCost(item, randomBot)
-    local cost = ChooseCostFormula(CostFormula, item)
-    
-    -- Item type price adjustments
-    if RecipePriceAdjustment and item.class == 9 and not item.name:find("Design:") then 
-        cost = cost * RecipePriceAdjustment 
-    end
-    
-    if GemPriceAdjustment and item.class == 3 then 
-        cost = cost * GemPriceAdjustment * (1 + (math.random() * 0.4 - 0.2)) 
-    end
-    
-    if UndervaluedItemAdjust and cost < 50000 then 
-        if ((item.class == 7 and item.entry > 40000) or (item.name:find("VIII"))) and not (item.Quality > 2 or item.entry == 41511) then 
-            cost = cost * UndervaluedItemAdjust 
-        end 
-    end
-    
-    -- Failsafe for extremely low costs
-    if not cost or cost < 1000 then 
-        cost = math.random(10000, 100000) 
-    end
-    
-    -- Special handling for high-level bracers
-    if item.class == 4 and item.ItemLevel > 200 and item.InventoryType == 9 and item.bonding == 2 then 
-        if cost < 500000 then cost = cost * 100 end 
-    end 
-    
-    -- Handle pets and glyphs
-    if LowPriceFloor then
-        if (((item.class == 15 and item.subclass == 2) or (item.class == 16)) and cost < 200000) then 
-            cost = LowPriceFloor * (math.random() * 0.6 + 0.7) 
-        end
-    elseif UndervaluedItemAdjust then 
-        if (((item.class == 15 and item.subclass == 2) or (item.class == 16)) and cost < 200000) then 
-            cost = cost * UndervaluedItemAdjust 
-        end 
-    end
-    
-    -- Adjusted ammo prices
-    if AdjustedAmmoPrices and item.class == 6 then
-        local ammoPrices = {
-            [1] = {150, 5000},
-            [2] = {10000, 100000},
-            [3] = {100000, 150000},
-            [4] = {200000, 350000},
-            [5] = {350000, 1000000}
-        }
-        local priceRange = ammoPrices[item.Quality]
-        if priceRange then
-            cost = math.random(priceRange[1], priceRange[2])
-        end
-    end
-    
-    -- Set crafted by
-    if item.craftedBy == 1 then 
-        item.craftedBy = randomBot 
-    end
-    
-    return cost
-end
-
 local function CalculateStackSize(item)
     local stack = 1
     
@@ -921,7 +918,7 @@ local function ProcessItemCreation(selectedItems, houseId, availableGuids, avail
             table.remove(availableIds, 1)
             
             local randomBot = AHBots[math.random(1, #AHBots)]
-            local cost = CalculateItemCost(item, randomBot)
+            local cost = CalculateItemCost(item)
             local stack = CalculateStackSize(item)
             local expireTime = os.time() + math.random(6 * 3600, 48 * 3600)
             
@@ -933,7 +930,12 @@ local function ProcessItemCreation(selectedItems, houseId, availableGuids, avail
             local startBid = math.floor(cost * (math.random(51, 90) / 100))
             
             local randomStats, enchantString = EnchantmentModule.ApplyRandomEnchantments(item)
-            
+
+            -- Set crafted by
+            if item.craftedBy == 1 then
+                item.craftedBy = randomBot
+            end
+
             -- Add item_instance entry
             table.insert(itemQueryParts, "(" .. lastItemId .. ", " .. item.entry .. ", " .. randomBot .. ", " .. item.craftedBy .. ", 0, " .. stack .. ", 0, '" ..
                 item.c1 .. " " .. item.c2 .. " " .. item.c3 .. " " .. item.c4 .. " " .. item.c5 .. "', 0, '"..enchantString.."', " ..
