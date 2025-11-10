@@ -627,7 +627,7 @@ local function CalculateItemCost(item)
 
     -- Adjusted ammo prices
     if AdjustedAmmoPrices and item.class == 6 then
-        local ammoPrices = {
+        local ammoPrices = { -- min, max price per stack of 1000
             [1] = {150, 5000},
             [2] = {10000, 100000},
             [3] = {100000, 150000},
@@ -636,7 +636,7 @@ local function CalculateItemCost(item)
         }
         local priceRange = ammoPrices[item.Quality]
         if priceRange then
-            cost = math.random(priceRange[1], priceRange[2])
+            cost = math.random(priceRange[1], priceRange[2]) / 1000
         end
     end
 
