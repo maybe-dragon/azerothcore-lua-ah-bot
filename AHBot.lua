@@ -296,7 +296,8 @@ if EnableItemFilters then
         }
         local exp = expansionData[Expansion]
         if exp then
-            table.insert(conditions, "entry NOT IN (" .. table.concat(exp.items, ',') .. ") AND entry < " .. exp.maxEntry)
+            table.insert(conditions, "entry NOT IN (" .. table.concat(exp.items, ',') .. ")")
+            table.insert(conditions, "(entry < " .. exp.maxEntry .. (AllowGlyphs and " OR class = 16)" or ")"))
         end
     end
     
