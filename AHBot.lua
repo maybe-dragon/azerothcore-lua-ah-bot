@@ -597,6 +597,11 @@ local function CalculateItemCost(item)
         end
     end
 
+    -- Do not allow base price to go below SellPrice
+    if cost < item.SellPrice then
+        cost = item.SellPrice
+    end
+
     if MinPriceFloor > 0 then
         local ceiling = MinPriceFloor * 10
         if cost < ceiling then
