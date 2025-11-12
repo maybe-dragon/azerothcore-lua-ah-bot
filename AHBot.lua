@@ -383,7 +383,7 @@ if EnableItemFilters then
         
         -- Consolidated name exclusions
         local nameExclusions = {
-            "'%OLD%'", "'%NPC%'", "'%QA%'", "'%enchant ring%'", "'%tablet%'", "'%throwing dagger%'",
+            "'ZZOLD%'", "'%NPC%'", "'%QA%'", "'%enchant ring%'", "'%tablet%'", "'%throwing dagger%'",
             "'%shot pouch%'", "'%brimstone%'", "'%small pouch%'", "'%stormjewel%'", "'%dye%'",
             "'%feathers of azeroth%'", "'%broken%throwing%'", "'%northrend meat%'", "'%ironwood seed%'",
             "'%stranglethorn seed%'", "'%simple wood%'", "'%small sack of coins%'", "'%slimy bag%'",
@@ -415,6 +415,10 @@ if EnableItemFilters then
         table.insert(conditions, "NAME NOT LIKE '% Crate %' AND NAME NOT LIKE 'Crate %' AND NAME NOT LIKE '% Crate'")
         table.insert(conditions, "NOT (CLASS = 15 AND NAME LIKE '%throw%')")
         table.insert(conditions, "NOT (NAME LIKE '%broken%' AND NAME LIKE '%throwing%')")
+        -- The collate is utf8mb4_unicode_ci: comparisons are case-insensitive by default.
+        -- No need for upper() or lower(), but better be save, just in case it ever changes.
+        -- But for the following we need a case-sensitive check (one of the arguments needs to be in a case-sensitive collation):
+        table.insert(conditions, "name NOT LIKE '%OLD%' COLLATE utf8mb4_0900_as_cs")
     end
 
     if #conditions > 0 then
